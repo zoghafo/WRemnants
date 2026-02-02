@@ -146,6 +146,9 @@ def analysis_debug_output(results):
     logger.debug("")
 
 
+def fmt(x):
+    return f"{x:g}".replace(".", "p")
+
 def write_analysis_output(results, outfile, args):
     analysis_debug_output(results)
 
@@ -154,6 +157,14 @@ def write_analysis_output(results, outfile, args):
         to_append.append(args.theoryCorr[0] + "_Corr")
     if args.maxFiles is not None:
         to_append.append(f"maxFiles_{args.maxFiles}".replace("-", "m"))
+
+    if args.ptll_min is not None and args.ptll_max is not None:
+        to_append.append(f"ZpT{fmt(args.ptll_min)}to{fmt(args.ptll_max)}")
+    elif args.ptll_min is not None:
+        to_append.append(f"ZpTmin{fmt(args.ptll_min)}")
+    elif args.ptll_max is not None:
+        to_append.append(f"ZpTmax{fmt(args.ptll_max)}")
+    
     if len(args.pdfs) >= 1 and args.pdfs[0] != "ct18z":
         to_append.append(args.pdfs[0])
     if hasattr(args, "ptqVgen") and args.ptqVgen:

@@ -1,6 +1,7 @@
 import hist
 from matplotlib import colormaps
 
+import os
 from utilities import parsing
 from utilities.styles import styles
 from wremnants import syst_tools
@@ -166,6 +167,12 @@ parser.add_argument(
     help="Order of the polynomial for the smoothing of the application region or full prediction, depending on the smoothing mode",
 )
 parser.add_argument(
+    "--ptcut",
+    type=str,
+    default="",
+    help="pT cut name to include in output filename (e.g., ZpT0to10)",
+)
+parser.add_argument(
     "--fakerateAxes",
     nargs="+",
     help="Axes for the fakerate binning",
@@ -191,11 +198,17 @@ parser.add_argument(
     help="Scale a variation by this factor",
 )
 parser.add_argument(
+    "--extraText",
+    nargs="+",
+    default=[],
+    help="Extra text lines to draw on the plot (can pass multiple)",
+)
+parser.add_argument(
     "--extraTextLoc",
     type=float,
     nargs=2,
     default=(0.05, 0.8),
-    help="Location in (x,y) for additional text, aligned to upper left",
+    help="Location in 'x y' for additional text, aligned to upper left",
 )
 subparsers = parser.add_subparsers(dest="variation")
 variation = subparsers.add_parser(
@@ -252,7 +265,7 @@ logger = logging.setup_logger(__file__, args.verbose, args.noColorLogger)
 def padArray(ref, matchLength):
     return ref + ref[-1:] * (len(matchLength) - len(ref))
 
-
+# If variation is added or not
 addVariation = hasattr(args, "varName") and args.varName is not None
 
 entries = []
@@ -276,15 +289,35 @@ if addVariation and (args.selectAxis or args.selectEntries):
 
 outdir = output_tools.make_plot_dir(args.outpath, args.outfolder, eoscp=args.eoscp)
 
+# groups.getNames(): 'Data', 'Zmumu', 'Ztautau', 'PhotonInduced', 'Other'
+# groups.groups: {'Data': <wremnants.datasets.datagroups.DataGroup ...>,
+#                 'Zmumu': ...,
+#                 'Ztautau': ...,
+#                 'PhotonInduced': ...,
+#                 'Other': ...}
+# groups.mode = z_dilepton
 groups = Datagroups(
     args.infile,
     filterGroups=args.procFilters,
     excludeGroups=args.excludeProcs,
 )
+print(f"\n\n\nInitialized datagroups: flavor={groups.flavor}, mode={groups.mode}, "
+f"n_groups={len(groups.groups)}, names={groups.getNames()} \n\n\n")
 
+for name, grp in groups.groups.items():
+    print(f"Group: {name}")
+    print(" hist keys:", list(grp.hists.keys()))
+    print()
+
+print(f"\n\n\n styles.process_supergroups: {styles.process_supergroups} \n\n\n")
 if not args.fineGroups:
+    # styles.process_supergroups: {'sv': {'Prompt': ['Wmunu', 'Wtaunu', 'Ztautau', 'Zmumu', 'DYlowMass', 'PhotonInduced', 'Top', 'Diboson'], 'Fake': ['Fake'], 'QCD': ['QCD']}, 'w_mass': {'Wmunu': ['Wmunu'], 'Wtaunu': ['Wtaunu'], 'Z': ['Ztautau', 'Zmumu', 'DYlowMass'], 'Fake': ['Fake'], 'Rare': ['PhotonInduced', 'Top', 'Diboson'], 'BSM': ['WtoNMu_5', 'WtoNMu_10', 'WtoNMu_50']},                     --> 'z_dilepton': {'Zmumu': ['Zmumu'], 'Other': ['Other', 'Ztautau', 'PhotonInduced']},                                                         'w_lowpu': {'Zll': ['Ztautau', 'Zmumu', 'Zee', 'DYlowMass'], 'Rare': ['PhotonInduced', 'Top', 'Diboson']}, 'z_wlike': {'Zmumu': ['Zmumu'], 'Other': ['Other', 'Ztautau', 'PhotonInduced']}, 'w_mass_npmc': {'Wmunu': ['Wmunu'], 'Wtaunu': ['Wtaunu'], 'Z': ['Ztautau', 'Zmumu', 'DYlowMass'], 'Fake': ['QCD'], 'Rare': ['PhotonInduced', 'Top', 'Diboson']}, 'z_lowpu': {'Zmumu': ['Zmumu'], 'Other': ['Other', 'Ztautau', 'PhotonInduced']}, 'bsm': {'Wmunu': ['Wmunu'], 'Wtaunu': ['Wtaunu'], 'Z': ['Ztautau', 'Zmumu', 'DYlowMass'], 'Fake': ['Fake'], 'Rare': ['PhotonInduced', 'Top', 'Diboson'], 'BSM': ['WtoNMu_5', 'WtoNMu_10', 'WtoNMu_50']}}
     if groups.mode in styles.process_supergroups:
         for new_name, old_groups in styles.process_supergroups[groups.mode].items():
+            print(f"Merging groups {old_groups} into {new_name}")
+            # old_groups: ['Zmumu'] and ['Other', 'Ztautau', 'PhotonInduced']
+            # new_name: Zmumu and Other
+            # ['Zmumu'] gets merged into Zmumu and ['Other', 'Ztautau', 'PhotonInduced'] into Other
             groups.mergeGroups(old_groups, new_name)
     else:
         logger.warning(
@@ -295,6 +328,7 @@ if not args.fineGroups:
 datasets = groups.getNames()
 logger.info(f"Will plot datasets {datasets}")
 
+# args.channel chooses the sign of the lepton. if 'all', then both are chosen
 select = (
     {}
     if args.channel == "all"
@@ -316,6 +350,7 @@ if len(args.presel):
             logger.info(f"Integrating boolean {ps} axis")
             presel[ps] = s[:: hist.sum]
     groups.setGlobalAction(lambda h: h[presel])
+    print(f"\nApplied global preselection: {presel} \n")
 
 if args.axlim or args.rebin or args.absval:
     logger.info("Rebin")
@@ -328,27 +363,39 @@ if args.axlim or args.rebin or args.absval:
     )
 
 if args.selection:
+    print("args.selection1: ", args.selection)
+    print()
     applySelection = False
     if args.selection != "none":
+        print("args.selection2: ", args.selection)
+        print()
         translate = {
             "hist.overflow": hist.overflow,
             "hist.underflow": hist.underflow,
             "hist.sum": hist.sum,
         }
         for selection in args.selection.split(","):
+            print("selection", selection)
             axis, value = selection.split("=")
+            print("axis: ", axis, "\t value: ", value)
+            print()
             if value.startswith("["):
                 parts = [
                     translate[p] if p in translate else int(p) if p != str() else None
                     for p in value[1:-1].split(":")
                 ]
+                print("parts: ", parts)
                 select[axis] = hist.tag.Slicer()[parts[0] : parts[1] : parts[2]]
+                print("if select[axis]: ", select[axis])
+                print()
             elif value == "hist.overflow":
                 select[axis] = hist.overflow
             elif value == "hist.underflow":
                 select[axis] = hist.overflow
             else:
                 select[axis] = int(value)
+                print(" else select[axis]: ", select[axis])
+                print()
 else:
     applySelection = True
 
@@ -382,6 +429,7 @@ else:
         applySelection=applySelection,
     )
 
+# What to exclude from stacking. HERE: 'Data'
 exclude = ["Data"]
 unstack = exclude[:]
 if args.noData:
@@ -459,7 +507,9 @@ if addVariation:
 
         exclude.append(varname)
         unstack.append(varname)
-
+        
+# args.basename = nominal
+# Histograms are sorted by number of events
 groups.sortByYields(args.baseName, nominalName=nominalName)
 histInfo = groups.groups
 
@@ -471,6 +521,7 @@ prednames = list(
         )
     )
 )
+# prednames = ['Other', 'Zmumu']
 logger.info(f"Stacked processes are {prednames}")
 
 text_pieces = []
@@ -479,6 +530,9 @@ if args.normToData:
 else:
     text_pieces.append("Prefit")
 
+if getattr(args, "extraText", None):
+    text_pieces.extend(args.extraText)
+    
 if args.channel != "all":
     text_pieces.append(
         r"$\mathit{q}^\mu$ = " + ("+1" if args.channel == "plus" else "-1")
@@ -508,7 +562,9 @@ overflow_ax = [
     "met",
     "mt",
 ]
+print(f"args.hists: {args.hists} \n")
 for h in args.hists:
+    print(f"Plotting histogram: {h} \n")
     if any(
         x in h.split("-")
         for x in ["pt", "ptll", "mll", "ptW", "ptVgen", "ptVGen", "ptWgen", "ptZgen"]
@@ -521,30 +577,40 @@ for h in args.hists:
         ylabel = r"$Events\,/\,bin$"
 
     if args.rlabel is None:
+        print(f"args.rlabel: {args.rlabel} \n")
         if args.noData:
+            print(f"args.noData: {args.noData} \n")
             rlabel = "Ratio to nominal"
         elif args.ratioToData:
+            print(f"args.ratioToData: {args.ratioToData} \n")
             rlabel = r"$Pred.\,/\,Data$"
         else:
             rlabel = r"$Data\,/\,Pred.$"
+            print(f"rlabel1: {rlabel} \n")
     else:
         rlabel = args.rlabel
+        print(f"rlabel2: {rlabel} \n")
 
     sp = h.split("-")
+    print(f"sp: {sp} \t len(sp): {len(sp)} \n")
     xlabel = plot_tools.get_axis_label(styles, sp)
+    print(f"xlabel: {xlabel} \n")
     if len(sp) > 1:
         base_action = lambda x: collapseSyst(x[select])
         action = lambda x: hh.unrolledHist(base_action(x), binwnorm=binwnorm, obs=sp)
+        print(f"\n\n\nbase_action1: {base_action} \n\n\n")
+        print(f"\n\n\naction: {action} \n\n\n")
     else:
         base_action = lambda x: hh.projectNoFlow(
             collapseSyst(x[select]), h, overflow_ax
         )
+        print(f"\n\n\nbase_action2: {base_action}, type of base_action2: {type(base_action)} \n\n\n")
         action = base_action
         href = h if h != "ptVgen" else ("ptWgen" if "Wmunu" in prednames else "ptZgen")
-
+        print(f"\n\n\nhref: {href} \n\n\n")
     if groups.flavor in ["e", "ee"]:
         xlabel = xlabel.replace(r"\mu", "e")
-
+    # print(f"histInfo: {histInfo} \n {prednames} \n {args.baseName} \n")
     fig = plot_tools.makeStackPlotWithRatio(
         histInfo,
         prednames,
@@ -594,6 +660,12 @@ for h in args.hists:
     )
 
     to_join = [f"{h.replace('-','_')}"]
+    # include ptcut name in output filename if provided
+    if getattr(args, "ptcut", ""):
+        to_join.append(args.ptcut)
+    # histogram internal names should NOT include ptcut; build a separate base
+    hist_base_parts = [p for p in to_join if p and p != getattr(args, "ptcut", "")]
+    hist_basename = "_".join(hist_base_parts)
     if "varName" in args and args.varName:
         var_arg = args.varName[0]
         if "selectEntries" in args and args.selectEntries:
@@ -609,6 +681,60 @@ for h in args.hists:
         outfile += "_preliminary"
 
     plot_tools.save_pdf_and_png(outdir, outfile)
+    # -- Save summed prediction histogram to ROOT
+    # decide whether to let save_root_histogram divide by bin widths
+    # if `action` already applied `binwnorm` (for unrolled multi-dim hists),
+    # avoid double-scaling by passing None. For 1D hists, pass `binwnorm`.
+    save_binwnorm = binwnorm if len(sp) == 1 else None
+
+    pred_h = None
+    for proc in prednames:
+        grp = groups.groups[proc]
+        # choose a histogram label robustly: prefer args.baseName, then nominalName,
+        # otherwise pick the first available histogram in the group
+        if args.baseName in grp.hists:
+            label = args.baseName
+        elif nominalName in grp.hists:
+            label = nominalName
+        else:
+            # fallback to any available key
+            try:
+                label = next(iter(grp.hists.keys()))
+                logger.warning(f"Using fallback label '{label}' for proc {proc}")
+            except StopIteration:
+                logger.warning(f"No histograms found for proc {proc}; skipping")
+                continue
+        hproc = grp.hists[label]
+        hsel = action(hproc) if callable(action) else hproc
+        if pred_h is None:
+            pred_h = hsel.copy()
+        else:
+            pred_h = pred_h + hsel
+    # choose ROOT file basename: use ptcut if provided, otherwise use outfile
+    root_basename = args.ptcut if getattr(args, "ptcut", "") else outfile
+    if pred_h is not None:
+        # save prediction into ROOT file named by `root_basename`.root
+        # internal histogram name should not include ptcut, use hist_basename
+        plot_tools.save_root_histogram(pred_h, outdir, root_basename, histname=hist_basename + "_pred", binwnorm=save_binwnorm)
+
+    # -- Save data histogram (if present)
+    if "Data" in groups.groups and not args.noData:
+        grp = groups.groups["Data"]
+        # robust selection of data histogram label
+        if args.baseName in grp.hists:
+            dlabel = args.baseName
+        elif nominalName in grp.hists:
+            dlabel = nominalName
+        else:
+            try:
+                dlabel = next(iter(grp.hists.keys()))
+                logger.warning(f"Data: using fallback label '{dlabel}' for Data group")
+            except StopIteration:
+                logger.warning("Data group contains no histograms; skipping data save")
+                dlabel = None
+        if dlabel is not None:
+            hdata = action(grp.hists[dlabel]) if callable(action) else grp.hists[dlabel]
+            plot_tools.save_root_histogram(hdata, outdir, root_basename, histname=hist_basename + "_data", binwnorm=save_binwnorm)
 
     stack_yields = groups.make_yields_df(
         args.baseName, prednames, norm_proc="Data", action=base_action

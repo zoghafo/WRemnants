@@ -1,0 +1,221 @@
+Object Type: <class 'dict'>
+
+time:
+  2025-12-08 17:03:04.529377
+command:
+  scripts/histmakers/mz_dilepton.py --filterProcs ZmumuPostVF -onlyMainHistograms --noAuxiliaryHistograms -j 200
+args:
+  verbose: 3
+  noColorLogger: False
+  nThreads: 200
+  pdfs: ['ct18z', 'msht20mcrange_renorm', 'msht20mbrange_renorm']
+  altPdfOnlyCentral: False
+  maxFiles: None
+  filterProcs: ['ZmumuPostVF']
+  excludeProcs: ['QCD']
+  postfix: None
+  forceDefaultName: False
+  theoryCorr: ['scetlib_dyturbo', 'scetlib_dyturboCT18ZVars', 'scetlib_dyturboCT18Z_pdfas']
+  theoryCorrAltOnly: False
+  ewTheoryCorr: ['renesanceEW', 'powhegFOEW', 'pythiaew_ISR', 'horaceqedew_FSR', 'horacelophotosmecoffew_FSR']
+  skipHelicity: False
+  noRecoil: False
+  recoilHists: False
+  recoilUnc: False
+  highptscales: False
+  dataPath: None
+  noVertexWeight: False
+  validationHists: False
+  onlyMainHistograms: False
+  met: DeepMETPVRobust
+  outfolder: nlyMainHistograms
+  appendOutputFile: 
+  sequentialEventLoops: False
+  era: 2016PostVFP
+  scale_A: 1.0
+  scale_e: 1.0
+  scale_M: 1.0
+  nonClosureScheme: A-M-combined
+  correlatedNonClosureNP: True
+  dummyNonClosureA: False
+  dummyNonClosureAMag: 6.8e-05
+  dummyNonClosureM: False
+  dummyNonClosureMMag: 0.0
+  noScaleToData: False
+  aggregateGroups: ['Diboson', 'Top', 'Wtaunu', 'Wmunu']
+  muRmuFPolVarFilePath: /eos/home-z/zoghafoo/WRemnants/utilities/../wremnants-data/data//MiNNLOmuRmuFPolVar/
+  muRmuFPolVarFileTag: x0p50_y4p00_ConstrPol5ExtYdep_Trad
+  nToysMC: -1
+  varianceScalingForToys: 1
+  randomSeedForToys: 0
+  dphiMuonMetCut: 0.0
+  muonCorrMC: idealMC_lbltruth
+  muonCorrData: lbl_massfit
+  muScaleBins: 1
+  muonScaleVariation: smearingWeightsSplines
+  dummyMuScaleVar: False
+  muonCorrMag: 0.0001
+  muonCorrEtaBins: 1
+  biasCalibration: None
+  noSmearing: False
+  trackerMuons: False
+  binnedScaleFactors: False
+  smooth3dsf: True
+  isoEfficiencySmoothing: False
+  noScaleFactors: False
+  isolationDefinition: iso04vtxAgn
+  isolationThreshold: 0.15
+  reweightPixelMultiplicity: False
+  requirePixelHits: False
+  pixelMultiplicityStat: False
+  vetoRecoPt: 15
+  vetoRecoEta: 2.4
+  oneMCfileEveryN: None
+  addRunAxis: False
+  nRunBins: 5
+  randomizeDataByRun: False
+  addMuonPhiAxis: None
+  addNvtxAxis: None
+  normWeightNvtx: None
+  sfFile: /eos/home-z/zoghafoo/WRemnants/utilities/../wremnants-data/data//muonSF/allSmooth_GtoHout_vtxAgnIso.root
+  eta: (48, -2.4, 2.4)
+  pt: [34, 26.0, 60.0]
+  fitresult: None
+  poiAsNoi: False
+  xnormOnly: False
+  unfolding: False
+  theoryAgnostic: False
+  unfoldingAxes: ['ptVGen', 'absYVGen']
+  unfoldingBins: [0, 15]
+  unfoldingLevels: ['prefsr', 'postfsr']
+  unfoldingInclusive: False
+  theoryAgnosticGenAxes: ['ptVgenSig', 'absYVgenSig', 'helicitySig']
+  theoryAgnosticGenPtVbinEdges: []
+  theoryAgnosticGenAbsYVbinEdges: []
+  theoryAgnosticPolVar: False
+  theoryAgnosticFilePath: .
+  theoryAgnosticFileTag: x0p50_y3p00_THAGNV0
+  theoryAgnosticSplitOOA: False
+  printParser: None
+  csVarsHist: False
+  axes: ['mll', 'ptll']
+  finePtBinning: False
+  useTheoryAgnosticBinning: False
+  useDileptonTriggerSelection: False
+  noAuxiliaryHistograms: True
+  muonIsolation: [1, 1]
+  flipEventNumberSplitting: False
+  useTnpMuonVarForSF: False
+  makeCSQuantileHists: False
+  splitSampleInN: -1
+  randomSeedForSplit: 12345
+  jackknifeN: 0
+  jackknifeEfficiency: 0.5
+  randomSeedForJackknife: 12345
+git_hash:
+  "62957567727e184aafe151ae395b09e9605df0fc"
+
+git_diff:
+  diff --git a/rabbit b/rabbit
+--- a/rabbit
++++ b/rabbit
+@@ -1 +1 @@
+-Subproject commit 79953d0c7581383db2d614109f2ddc4dfcddfa46
++Subproject commit 79953d0c7581383db2d614109f2ddc4dfcddfa46-dirty
+diff --git a/scripts/histmakers/mz_dilepton.py b/scripts/histmakers/mz_dilepton.py
+index d1f83c55..84c159ff 100644
+--- a/scripts/histmakers/mz_dilepton.py
++++ b/scripts/histmakers/mz_dilepton.py
+@@ -113,42 +113,68 @@ parser.add_argument(
+     help="Random seed for jackknifing procedure",
+ )
+ parser = parsing.set_parser_default(
++    # If user does no provide "aggregateGroups", the parser will use the list
+     parser, "aggregateGroups", ["Diboson", "Top", "Wtaunu", "Wmunu"]
+ )
++# Same here. Set defualt value if "excludeProcs" not provided by user
+ parser = parsing.set_parser_default(parser, "excludeProcs", ["QCD"])
++# Same here. Set defualt values if "pt" not provided by user and default depends on the "analysis_label"
+ parser = parsing.set_parser_default(
+     parser, "pt", common.get_default_ptbins(analysis_label)
+ )
+ 
++# Parse the arguments (defaults used for the arguments above if not provided by user)
+ args = parser.parse_args()
+ 
++''' To record messages about what it is doing (log file):
++    - Passes the filenanme to the logger (name the log-file afer the file)
++    - Controls the verbosity level from command line arguments
++    - Controls whether to use colors in the log messages from command line arguments or not
++'''
+ logger = logging.setup_logger(__file__, args.verbose, args.noColorLogger)
+ 
++# Choose analysis type
+ thisAnalysis = (
+     ROOT.wrem.AnalysisType.Dilepton
++    # if flag is passed on the command line (see above), use dilepton analysis type: sorting is based on the muon charge as -/+
+     if args.useDileptonTriggerSelection
+-    else ROOT.wrem.AnalysisType.Wlike
++    # otherwise use Wlike (default)
++    else ROOT.wrem.AnalysisType.Wlike 
+ )
++# Get the isolation branch name based on the isolation definition
+ isoBranch = muon_selections.getIsoBranch(args.isolationDefinition)
++# Copy the "--era" command-line argument into a variable "era" (which year/period of data to use)
+ era = args.era
+ 
++# Build datasets
+ datasets = getDatasets(
++    # Number of files to use per dataset
+     maxFiles=args.maxFiles,
++    # Filter processes to include (e.g. only W or Z samples)
+     filt=args.filterProcs,
++    # Filter processes to exclude
+     excl=args.excludeProcs,
++    # Select NanoAOD version
+     nanoVersion="v9",
++    # ROOT folder where the data/MC files are located
+     base_path=args.dataPath,
++    # if "msht20an3lo" is not in hte list of PDF sets
+     extended="msht20an3lo" not in args.pdfs,
++    # Take one MC file every N file
+     oneMCfileEveryN=args.oneMCfileEveryN,
++    # Choose the correct era (year/period of data taking)
+     era=era,
+ )
+ 
+ # dilepton invariant mass cuts
+ mass_min, mass_max = common.get_default_mz_window()
+ 
++# EW mass binning: [91.1535 - 2.4932, 91.1535 + 2.4932] GeV = [88.6603, 93.6467] with 0.010 step size
+ ewMassBins = theory_tools.make_ew_binning(mass=91.1535, width=2.4932, initialStep=0.010)
+ 
++# Choose dilepton pt binning
+ if args.useTheoryAgnosticBinning:
++    # Include the underflow/overflow bins in pT, absYll and wlike binning
+     theoryAgnostic_axes, _ = differential.get_theoryAgnostic_axes(
+         ptV_flow=True, absYV_flow=True, wlike=True
+     )
+@@ -157,6 +183,7 @@ if args.useTheoryAgnosticBinning:
+ else:
+     dilepton_ptV_binning = common.get_dilepton_ptV_binning(args.finePtBinning)
+ 
++# Rapidity
+ if "yll" in args.axes:
+     # use 10 quantiles in case "yll" is used as nominal axis
+     edges_yll = common.yll_10quantiles_binning
+@@ -291,6 +318,7 @@ for a in args.axes:
+ nominal_cols = args.axes
+ 
+ if args.csVarsHist:
++    # Collins-Soper variables/frame
+     # in case CS variables are added to the main histogram, use optimized binning
+     # CS variables will be binned in nxn quantiles; quantiles are computed in each bin of args.axes as provided by the quantile_file
+     n_quantiles = 8
+diff --git a/wremnants-data b/wremnants-data
+--- a/wremnants-data
++++ b/wremnants-data
+@@ -1 +1 @@
+-Subproject commit d2c1437c2eec2e42ce03994b9be6a32dbfaea370
++Subproject commit d2c1437c2eec2e42ce03994b9be6a32dbfaea370-dirty
+

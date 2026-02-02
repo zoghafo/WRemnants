@@ -1,0 +1,125 @@
+Object Type: <class 'dict'>
+
+time:
+  2025-12-05 17:12:43.242280
+command:
+  scripts/histmakers/mz_dilepton.py --maxFiles 100 --filterProcs ZmumuPostVF -onlyMainHistograms --noAuxiliaryHistograms -j 200
+args:
+  verbose: 3
+  noColorLogger: False
+  nThreads: 200
+  pdfs: ['ct18z', 'msht20mcrange_renorm', 'msht20mbrange_renorm']
+  altPdfOnlyCentral: False
+  maxFiles: 100
+  filterProcs: ['ZmumuPostVF']
+  excludeProcs: ['QCD']
+  postfix: None
+  forceDefaultName: False
+  theoryCorr: ['scetlib_dyturbo', 'scetlib_dyturboCT18ZVars', 'scetlib_dyturboCT18Z_pdfas']
+  theoryCorrAltOnly: False
+  ewTheoryCorr: ['renesanceEW', 'powhegFOEW', 'pythiaew_ISR', 'horaceqedew_FSR', 'horacelophotosmecoffew_FSR']
+  skipHelicity: False
+  noRecoil: False
+  recoilHists: False
+  recoilUnc: False
+  highptscales: False
+  dataPath: None
+  noVertexWeight: False
+  validationHists: False
+  onlyMainHistograms: False
+  met: DeepMETPVRobust
+  outfolder: nlyMainHistograms
+  appendOutputFile: 
+  sequentialEventLoops: False
+  era: 2016PostVFP
+  scale_A: 1.0
+  scale_e: 1.0
+  scale_M: 1.0
+  nonClosureScheme: A-M-combined
+  correlatedNonClosureNP: True
+  dummyNonClosureA: False
+  dummyNonClosureAMag: 6.8e-05
+  dummyNonClosureM: False
+  dummyNonClosureMMag: 0.0
+  noScaleToData: False
+  aggregateGroups: ['Diboson', 'Top', 'Wtaunu', 'Wmunu']
+  muRmuFPolVarFilePath: /eos/home-z/zoghafoo/WRemnants/utilities/../wremnants-data/data//MiNNLOmuRmuFPolVar/
+  muRmuFPolVarFileTag: x0p50_y4p00_ConstrPol5ExtYdep_Trad
+  nToysMC: -1
+  varianceScalingForToys: 1
+  randomSeedForToys: 0
+  dphiMuonMetCut: 0.0
+  muonCorrMC: idealMC_lbltruth
+  muonCorrData: lbl_massfit
+  muScaleBins: 1
+  muonScaleVariation: smearingWeightsSplines
+  dummyMuScaleVar: False
+  muonCorrMag: 0.0001
+  muonCorrEtaBins: 1
+  biasCalibration: None
+  noSmearing: False
+  trackerMuons: False
+  binnedScaleFactors: False
+  smooth3dsf: True
+  isoEfficiencySmoothing: False
+  noScaleFactors: False
+  isolationDefinition: iso04vtxAgn
+  isolationThreshold: 0.15
+  reweightPixelMultiplicity: False
+  requirePixelHits: False
+  pixelMultiplicityStat: False
+  vetoRecoPt: 15
+  vetoRecoEta: 2.4
+  oneMCfileEveryN: None
+  addRunAxis: False
+  nRunBins: 5
+  randomizeDataByRun: False
+  addMuonPhiAxis: None
+  addNvtxAxis: None
+  normWeightNvtx: None
+  sfFile: /eos/home-z/zoghafoo/WRemnants/utilities/../wremnants-data/data//muonSF/allSmooth_GtoHout_vtxAgnIso.root
+  eta: (48, -2.4, 2.4)
+  pt: [34, 26.0, 60.0]
+  fitresult: None
+  poiAsNoi: False
+  xnormOnly: False
+  unfolding: False
+  theoryAgnostic: False
+  unfoldingAxes: ['ptVGen', 'absYVGen']
+  unfoldingBins: [0, 15]
+  unfoldingLevels: ['prefsr', 'postfsr']
+  unfoldingInclusive: False
+  theoryAgnosticGenAxes: ['ptVgenSig', 'absYVgenSig', 'helicitySig']
+  theoryAgnosticGenPtVbinEdges: []
+  theoryAgnosticGenAbsYVbinEdges: []
+  theoryAgnosticPolVar: False
+  theoryAgnosticFilePath: .
+  theoryAgnosticFileTag: x0p50_y3p00_THAGNV0
+  theoryAgnosticSplitOOA: False
+  printParser: None
+  csVarsHist: False
+  axes: ['mll', 'ptll']
+  finePtBinning: False
+  useTheoryAgnosticBinning: False
+  useDileptonTriggerSelection: False
+  noAuxiliaryHistograms: True
+  muonIsolation: [1, 1]
+  flipEventNumberSplitting: False
+  useTnpMuonVarForSF: False
+  makeCSQuantileHists: False
+  splitSampleInN: -1
+  randomSeedForSplit: 12345
+  jackknifeN: 0
+  jackknifeEfficiency: 0.5
+  randomSeedForJackknife: 12345
+git_hash:
+  "62957567727e184aafe151ae395b09e9605df0fc"
+
+git_diff:
+  diff --git a/wremnants-data b/wremnants-data
+--- a/wremnants-data
++++ b/wremnants-data
+@@ -1 +1 @@
+-Subproject commit d2c1437c2eec2e42ce03994b9be6a32dbfaea370
++Subproject commit d2c1437c2eec2e42ce03994b9be6a32dbfaea370-dirty
+
