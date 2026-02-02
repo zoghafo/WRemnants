@@ -578,6 +578,8 @@ def get_default_mtcut(analysis_label=None):
 def get_default_mz_window():
     return 60, 120
 
+def get_default_ptllcut():
+    return 10, 20
 
 # following list is used in other scripts to track what steps are charge dependent
 # but assumes the corresponding efficiencies were made that way
