@@ -713,7 +713,8 @@ class Datagroups(object):
         return procs
 
     def sortByYields(self, histName, nominalName="nominal"):
-        def get_sum(h):
+        def get_sum(h, proc_name=""):
+            print(f"Process: {proc_name}, Number of events for this pT cut: {h.sum()}")
             return h.sum() if not hasattr(h.sum(), "value") else h.sum().value
 
         self.groups = dict(
@@ -721,7 +722,7 @@ class Datagroups(object):
                 self.groups.items(),
                 key=lambda x: (
                     get_sum(
-                        x[1].hists[histName if histName in x[1].hists else nominalName]
+                        x[1].hists[histName if histName in x[1].hists else nominalName], x[0]
                     )
                     if nominalName in x[1].hists or histName in x[1].hists
                     else 0

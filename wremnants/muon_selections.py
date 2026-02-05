@@ -255,6 +255,8 @@ def select_z_candidate(
     df,
     mass_min=60,
     mass_max=120,
+    ptll_min=0,
+    ptll_max=20,
     name_first="trigMuons",
     name_second="nonTrigMuons",
     mass="wrem::muon_mass",
@@ -277,6 +279,11 @@ def select_z_candidate(
     df = df.Define("mll", "ll_mom4.mass()")
 
     df = df.Filter(f"mll >= {mass_min} && mll < {mass_max}")
+
+    df = df.Define("ptll", "ll_mom4.pt()")
+    df = df.Filter(f"ptll >= {ptll_min}")
+    df = df.Filter(f"ptll < {ptll_max}")
+
 
     return df
 

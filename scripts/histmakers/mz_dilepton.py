@@ -1,4 +1,5 @@
 import os
+import csv
 
 from utilities import common, differential, parsing
 from wremnants.datasets.datagroups import Datagroups
@@ -112,45 +113,125 @@ parser.add_argument(
     default=12345,
     help="Random seed for jackknifing procedure",
 )
+parser.add_argument(
+    "--saveEventCsv",
+    action="store_true",
+    help="Save per-event CSV after selections (one row per event)",
+)
+parser.add_argument(
+    "--eventCsvCols",
+    type=str,
+    nargs="*",
+    default=["run", "luminosityBlock", "event", "mll", "ptll", "yll", "absYll", "nominal_weight"],
+    help="Columns to save in the event CSV",
+)
+parser.add_argument(
+    "--eventCsvOutDir",
+    type=str,
+    default="",
+    help="Output directory for event CSV files (defaults to --outfolder or CWD)",
+)
+parser.add_argument(
+    "--eventCsvMaxEvents",
+    type=int,
+    default=-1,
+    help="Maximum number of events to write per dataset (<=0 means all)",
+)
+parser.add_argument(
+    "--eventCsvPrefix",
+    type=str,
+    default="events",
+    help="Prefix for event CSV filenames",
+)
 parser = parsing.set_parser_default(
+    # If user does no provide "aggregateGroups", the parser will use the list
     parser, "aggregateGroups", ["Diboson", "Top", "Wtaunu", "Wmunu"]
 )
-parser = parsing.set_parser_default(
-    parser, "excludeProcs", ["QCD", "WtoNMu", "DYlowMass"]
-)
+# Same here. Set defualt value if "excludeProcs" not provided by user
+parser = parsing.set_parser_default(parser, "excludeProcs", ["QCD"])
+# Same here. Set defualt values if "pt" not provided by user and default depends on the "analysis_label"
 parser = parsing.set_parser_default(
     parser, "pt", common.get_default_ptbins(analysis_label)
 )
 
-args = parser.parse_args()
+# Parse the arguments (defaults used for the arguments above if not provided by user).
+# Use parse_known_args here because additional arguments are added later
+# (e.g. --ptllMin/--ptllMax). parse_known_args() will not raise on those
+# unknown options at this stage and they will be parsed in the final
+# `parser.parse_args()` call below.
+args, _ = parser.parse_known_args()
 
 logger = logging.setup_logger(__file__, args.verbose, args.noColorLogger)
 
+
+
+# Choose analysis type
 thisAnalysis = (
     ROOT.wrem.AnalysisType.Dilepton
+    # if flag is passed on the command line (see above), use dilepton analysis type: sorting is based on the muon charge as -/+
     if args.useDileptonTriggerSelection
-    else ROOT.wrem.AnalysisType.Wlike
+    # otherwise use Wlike (default)
+    else ROOT.wrem.AnalysisType.Wlike 
 )
+# Get the isolation branch name based on the isolation definition
 isoBranch = muon_selections.getIsoBranch(args.isolationDefinition)
+# Copy the "--era" command-line argument into a variable "era" (which year/period of data to use)
 era = args.era
 
+# Build datasets
 datasets = getDatasets(
+    # Number of files to use per dataset
     maxFiles=args.maxFiles,
+    # Filter processes to include (e.g. only W or Z samples)
     filt=args.filterProcs,
+    # Filter processes to exclude
     excl=args.excludeProcs,
+    # Select NanoAOD version
     nanoVersion="v9",
+    # ROOT folder where the data/MC files are located
     base_path=args.dataPath,
+    # if "msht20an3lo" is not in hte list of PDF sets
     extended="msht20an3lo" not in args.pdfs,
+    # Take one MC file every N file
     oneMCfileEveryN=args.oneMCfileEveryN,
+    # Choose the correct era (year/period of data taking)
     era=era,
 )
 
 # dilepton invariant mass cuts
 mass_min, mass_max = common.get_default_mz_window()
+# mass_min= common.get_default_mz_window()
+
+ptll_min, ptll_max = common.get_default_ptllcut()
+
+parser.add_argument(
+    "--ptllMin",
+    dest="ptll_min",
+    type=float,
+    default=ptll_min,
+    help="Minimum dilepton pT to select Z candidates",
+)
+parser.add_argument(
+    "--ptllMax",
+    dest="ptll_max",
+    type=float,
+    default=ptll_max,
+    help="Maximum dilepton pT to select Z candidates",
+)
+
+args = parser.parse_args()
+
+ptll_min = args.ptll_min
+ptll_max = args.ptll_max
+
+print(f"\n\n\nptllmin = {ptll_min}, ptllmax = {ptll_max}\n")
+print(f"args.ptllmin = {args.ptll_min}, args.ptllmax = {args.ptll_max}\n\n\n")
 
 ewMassBins = theory_tools.make_ew_binning(mass=91.1535, width=2.4932, initialStep=0.010)
 
+# Choose dilepton pt binning
 if args.useTheoryAgnosticBinning:
+    # Include the underflow/overflow bins in pT, absYll and wlike binning
     theoryAgnostic_axes, _ = differential.get_theoryAgnostic_axes(
         ptV_flow=True, absYV_flow=True, wlike=True
     )
@@ -202,6 +283,9 @@ all_axes = {
         ],
         name="mll",
     ),
+    "xmaxll": hist.axis.Regular(500, 0, 1, name="xmaxll"),
+    "xminll": hist.axis.Regular(500, 0, 1, name="xminll"),
+    # "xminmax_ll": hist.axis.Variable([[500, 0, 1], [500, 0, 1]], name="xminmax_ll"),
     "yll": axis_yll,
     "absYll": axis_absYll,
     "ptll": hist.axis.Variable(dilepton_ptV_binning, name="ptll", underflow=False),
@@ -508,6 +592,42 @@ corr_helpers = theory_corrections.load_corr_helpers(
 )
 
 
+def write_event_csv(df, dataset, cols):
+    if not args.saveEventCsv:
+        return
+
+    outdir = args.eventCsvOutDir or args.outfolder or os.getcwd()
+    os.makedirs(outdir, exist_ok=True)
+
+    available = {str(c) for c in df.GetColumnNames()}
+    missing = [c for c in cols if c not in available]
+    if missing:
+        logger.warning(f"Missing columns for CSV export: {missing}")
+    cols = [c for c in cols if c in available]
+    if not cols:
+        logger.warning("No valid columns found for CSV export; skipping")
+        return
+
+    df_csv = df
+    if args.eventCsvMaxEvents and args.eventCsvMaxEvents > 0:
+        df_csv = df_csv.Range(args.eventCsvMaxEvents)
+
+    data = df_csv.AsNumpy(cols)
+    nrows = len(next(iter(data.values()))) if data else 0
+
+    safe_name = dataset.name.replace("/", "_")
+    filename = f"{args.eventCsvPrefix}_{safe_name}.csv"
+    outpath = os.path.join(outdir, filename)
+
+    with open(outpath, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(cols)
+        for row in zip(*(data[c] for c in cols)):
+            writer.writerow(row)
+
+    logger.info(f"Wrote {nrows} events to {outpath}")
+
+
 def build_graph(df, dataset):
     logger.info(f"build graph for dataset: {dataset.name}")
     results = []
@@ -643,7 +763,7 @@ def build_graph(df, dataset):
         "nonTrigMuons_passIso0", f"{isoBranch}[nonTrigMuons][0] < {isoThreshold}"
     )
 
-    df = muon_selections.select_z_candidate(df, mass_min, mass_max)
+    df = muon_selections.select_z_candidate(df, mass_min, mass_max, ptll_min, ptll_max)
 
     df = muon_selections.select_standalone_muons(
         df, dataset, args.trackerMuons, "trigMuons"
@@ -707,9 +827,12 @@ def build_graph(df, dataset):
         df = df.Alias("nonTrigMuons_tnpCharge0", "nonTrigMuons_charge0")
         #
 
-    df = df.Define("ptll", "ll_mom4.pt()")
+    # df = df.Define("ptll", "ll_mom4.pt()")
     df = df.Define("yll", "ll_mom4.Rapidity()")
     df = df.Define("absYll", "std::fabs(yll)")
+    df = df.Define("xmaxll", "exp(yll)*mll/std::sqrt(13000*13000)")
+    df = df.Define("xminll", "exp(-yll)*mll/std::sqrt(13000*13000)")
+    # df = df.Define("xminmax_ll", "std::vector<double>{xminll, xmaxll}")
     # "renaming" to write out corresponding axis
     df = df.Alias("ptMinus", "muonsMinus_pt0")
     df = df.Alias("ptPlus", "muonsPlus_pt0")
@@ -764,6 +887,7 @@ def build_graph(df, dataset):
     if dataset.is_data:
         df = df.DefinePerSample("nominal_weight", "1.0")
         cvhName = "cvh"
+        write_event_csv(df, dataset, args.eventCsvCols)
     else:
         cvhName = "cvhideal"
 
@@ -907,6 +1031,8 @@ def build_graph(df, dataset):
             df, dataset.name, corr_helpers, args, theory_helpers=theory_helpers
         )
 
+        write_event_csv(df, dataset, args.eventCsvCols)
+
         results.append(
             df.HistoBoost(
                 "weight",
@@ -1021,6 +1147,9 @@ def build_graph(df, dataset):
         for obs in [
             ["ptll", "yll"],
             "mll",
+            "xmaxll",
+            "xminll",
+            # "xminmax_ll",
             "cosThetaStarll",
             "phiStarll",
             "etaPlus",
@@ -1480,6 +1609,27 @@ def build_graph(df, dataset):
 
 
 logger.debug(f"Datasets are {[d.name for d in datasets]}")
+
+# Write dataset filenames to text file
+output_dir = args.outfolder or os.getcwd()
+os.makedirs(output_dir, exist_ok=True)
+filenames_output = os.path.join(output_dir, "processed_files.txt")
+
+with open(filenames_output, "w") as f:
+    f.write("Datasets and files being processed:\n")
+    f.write("=" * 80 + "\n\n")
+    for dataset in datasets:
+        f.write(f"Dataset: {dataset.name}\n")
+        if hasattr(dataset, 'filelist') and dataset.filelist:
+            for filepath in dataset.filelist:
+                f.write(f"  - {filepath}\n")
+        elif hasattr(dataset, 'files') and dataset.files:
+            for filepath in dataset.files:
+                f.write(f"  - {filepath}\n")
+        f.write("\n")
+
+logger.info(f"Wrote dataset filenames to {filenames_output}")
+
 resultdict = narf.build_and_run(datasets[::-1], build_graph)
 
 if not args.noScaleToData:
