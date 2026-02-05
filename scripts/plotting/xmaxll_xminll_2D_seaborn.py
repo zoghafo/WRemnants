@@ -13,8 +13,8 @@ if sys.argv[1] == "oldmax100Files":
     data_file = "/home/z/zoghafoo/WRemnants/csv_files/max100FilesOld/events_dataPostVFP.csv"
     pred_file = "/home/z/zoghafoo/WRemnants/csv_files/max100FilesOld/events_ZmumuPostVFP.csv"
 elif sys.argv[1] == "newallFiles":
-    data_file = "/home/z/zoghafoo/WRemnants/csv_files/allFiles_03Feb2026/events_SingleMuon_2016PostVFP.csv"
-    pred_file = "/home/z/zoghafoo/WRemnants/csv_files/allFiles_03Feb2026/events_Zmumu_2016PostVFP.csv"
+    data_file = "/home/z/zoghafoo/WRemnants/csv_files/allFiles/events_SingleMuon_2016PostVFP.csv"
+    pred_file = "/home/z/zoghafoo/WRemnants/csv_files/allFiles/events_Zmumu_2016PostVFP.csv"
 else:
     print("Please provide a valid argument: 'oldmax100Files' or 'newallFiles'")
     sys.exit(1)
@@ -37,7 +37,9 @@ def xmin_xmax(mll, yll):
     return np.minimum(xplus, xminus), np.maximum(xplus, xminus)
 
 
-datasets = {"data": data, "pred": pred}
+datasets = {"data": data,
+            "pred": pred
+            }
 
 
 for l in [
@@ -54,7 +56,7 @@ for l in [
                 xbins = np.logspace(-2.4, -1, 50)
                 ybins = np.logspace(-3.5, -1.9, 50)
             elif sys.argv[1] == "newallFiles":
-                xbins = np.logspace(-2.45, -1.2, 200)
+                xbins = np.logspace(-2.45, -0.9, 200)
                 ybins = np.logspace(-3.5, -1.6, 100)
         else:
             if sys.argv[1] == "oldmax100Files":
@@ -153,6 +155,28 @@ for l in [
                 ax_main.text(0.012, 0.01, r"$\mathbf{y_{\boldsymbol{\mu\mu}}=0}$", color="dodgerblue")
             elif sys.argv[1] == "newallFiles":
                 ax_main.text(-0.001, 0.0125, r"$\mathbf{y_{\boldsymbol{\mu\mu}}=0}$", color="dodgerblue")
+        
+        # Set xlim based on xbins
+        ax_main.set_xlim(xbins[0], xbins[-1])
+        
+        mll_range = np.sort(df["mll"].values)
+        # Add curves where yll = ±2.5
+        
+        for yll_val in [2.5, -2.5]:
+            xmin_curve, xmax_curve = xmin_xmax(mll_range, np.full_like(mll_range, yll_val))
+            # Only plot up to x = 0.3
+            mask_xlim = xmax_curve <= 0.3
+            xmin_curve_filtered = xmin_curve[mask_xlim]
+            xmax_curve_filtered = xmax_curve[mask_xlim]
+            # Add starting point at xmax=0
+            xmax_curve_filtered = np.concatenate([[0], xmax_curve_filtered])
+            xmin_curve_filtered = np.concatenate([[0], xmin_curve_filtered])
+            order = np.argsort(xmax_curve_filtered)
+            ax_main.plot(xmax_curve_filtered[order], xmin_curve_filtered[order], color="green", linestyle="-", linewidth=2, zorder=6, alpha=0.7)
+            if l == "log":
+                ax_main.text(0.058, 0.00032, r"$\mathbf{|y_{\boldsymbol{\mu\mu}}|=2.5}$", color="green")
+            else:
+                ax_main.text(0.08, 0.002, r"$\mathbf{|y_{\boldsymbol{\mu\mu}}|=2.5}$", color="green")
 
         # add curve for 90 < m_ll < 92 GeV
         df_mZ = df[(df["mll"] > 90) & (df["mll"] < 92)]
