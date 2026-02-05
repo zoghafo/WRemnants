@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 
 # Array of ptll boundaries
-NUMBERS=(0 2 4 6 8 10 12 14 16 18 20)
+NUMBERS=(0 20)
 
 # Base command parameters
 SCRIPT="/home/z/zoghafoo/WRemnants/scripts/histmakers/mz_dilepton.py"
 COMMON_ARGS=(
   -j 200
-  --maxFiles 100
-  --axes ptll mll yll absYll xmaxll xminll
+  --axes ptll mll yll absYll
   -v 4
   --dataPath /scratch/shared/NanoAOD/
+  --outfolder /scratch/zoghafoo/
+  --saveEventCsv
+  --eventCsvOutDir /home/z/zoghafoo/WRemnants/csv_files/max100Files_03Feb2026
+  # --postfix allFiles_mZ_20_30000
+  --maxFiles 100
+  --postfix mZ_20_30000
+
 )
 
 # Loop over consecutive pairs

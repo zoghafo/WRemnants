@@ -1,5 +1,6 @@
 import hist
 from matplotlib import colormaps
+import ROOT
 
 import os
 from utilities import parsing

@@ -122,7 +122,7 @@ parser.add_argument(
     "--eventCsvCols",
     type=str,
     nargs="*",
-    default=["run", "luminosityBlock", "event", "mll", "yll", "ptll", "nominal_weight"],
+    default=["run", "luminosityBlock", "event", "mll", "ptll", "yll", "absYll", "nominal_weight"],
     help="Columns to save in the event CSV",
 )
 parser.add_argument(
@@ -200,6 +200,7 @@ datasets = getDatasets(
 
 # dilepton invariant mass cuts
 mass_min, mass_max = common.get_default_mz_window()
+# mass_min= common.get_default_mz_window()
 
 ptll_min, ptll_max = common.get_default_ptllcut()
 
@@ -240,14 +241,14 @@ else:
     dilepton_ptV_binning = common.ptZ_binning if not args.finePtBinning else range(200)
 
 if "yll" in args.axes:
-    # use 10 quantiles in case "yll" is used as nominal axis
-    edges_yll = common.yll_10quantiles_binning
+    # use 20 quantiles in case "yll" is used as nominal axis
+    edges_yll = common.yll_20quantiles_binning
     edges_absYll = edges_yll[len(edges_yll) // 2 :]
     axis_yll = hist.axis.Variable(edges_yll, name="yll")
     axis_absYll = hist.axis.Variable(edges_absYll, name="absYll", underflow=False)
 else:
-    axis_yll = hist.axis.Regular(20, -2.5, 2.5, name="yll")
-    axis_absYll = hist.axis.Regular(10, 0.0, 2.5, name="absYll", underflow=False)
+    axis_yll = hist.axis.Regular(100, -2.5, 2.5, name="yll")
+    axis_absYll = hist.axis.Regular(50, 0.0, 2.5, name="absYll", underflow=False)
 
 # available axes for dilepton validation plots
 all_axes = {
@@ -589,6 +590,7 @@ theory_corrs = [*args.theoryCorr, *args.ewTheoryCorr]
 corr_helpers = theory_corrections.load_corr_helpers(
     [d.name for d in datasets if d.name in common.vprocs], theory_corrs
 )
+
 
 def write_event_csv(df, dataset, cols):
     if not args.saveEventCsv:
@@ -1145,7 +1147,6 @@ def build_graph(df, dataset):
         for obs in [
             ["ptll", "yll"],
             "mll",
-            "yll",
             "xmaxll",
             "xminll",
             # "xminmax_ll",
@@ -1608,6 +1609,27 @@ def build_graph(df, dataset):
 
 
 logger.debug(f"Datasets are {[d.name for d in datasets]}")
+
+# Write dataset filenames to text file
+output_dir = args.outfolder or os.getcwd()
+os.makedirs(output_dir, exist_ok=True)
+filenames_output = os.path.join(output_dir, "processed_files.txt")
+
+with open(filenames_output, "w") as f:
+    f.write("Datasets and files being processed:\n")
+    f.write("=" * 80 + "\n\n")
+    for dataset in datasets:
+        f.write(f"Dataset: {dataset.name}\n")
+        if hasattr(dataset, 'filelist') and dataset.filelist:
+            for filepath in dataset.filelist:
+                f.write(f"  - {filepath}\n")
+        elif hasattr(dataset, 'files') and dataset.files:
+            for filepath in dataset.files:
+                f.write(f"  - {filepath}\n")
+        f.write("\n")
+
+logger.info(f"Wrote dataset filenames to {filenames_output}")
+
 resultdict = narf.build_and_run(datasets[::-1], build_graph)
 
 if not args.noScaleToData:

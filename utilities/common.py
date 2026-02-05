@@ -576,7 +576,7 @@ def get_default_mtcut(analysis_label=None):
 
 
 def get_default_mz_window():
-    return 60, 120
+    return 20, 30000
 
 def get_default_ptllcut():
     return 10, 20
