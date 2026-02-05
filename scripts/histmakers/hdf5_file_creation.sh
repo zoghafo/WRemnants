@@ -12,11 +12,10 @@ COMMON_ARGS=(
   --dataPath /scratch/shared/NanoAOD/
   --outfolder /scratch/zoghafoo/
   --saveEventCsv
-  --eventCsvOutDir /home/z/zoghafoo/WRemnants/csv_files/max100Files_03Feb2026
-  # --postfix allFiles_mZ_20_30000
-  --maxFiles 100
-  --postfix mZ_20_30000
-
+  --eventCsvOutDir /home/z/zoghafoo/WRemnants/csv_files/allFiles
+  --postfix allFiles_mZ20to30000
+  # --maxFiles 100
+  # --postfix mZ_20_30000
 )
 
 # Loop over consecutive pairs
