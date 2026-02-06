@@ -154,7 +154,7 @@ for l in [
             if sys.argv[1] == "oldmax100Files":
                 ax_main.text(0.012, 0.01, r"$\mathbf{y_{\boldsymbol{\mu\mu}}=0}$", color="dodgerblue")
             elif sys.argv[1] == "newallFiles":
-                ax_main.text(-0.001, 0.0125, r"$\mathbf{y_{\boldsymbol{\mu\mu}}=0}$", color="dodgerblue")
+                ax_main.text(0.003, 0.017, r"$\mathbf{y_{\boldsymbol{\mu\mu}}=0}$", color="dodgerblue")
         
         # Set xlim based on xbins
         ax_main.set_xlim(xbins[0], xbins[-1])
